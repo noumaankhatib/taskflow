@@ -41,6 +41,7 @@ export async function createPgDb(connectionString = databaseUrl()): Promise<Db> 
     // serverless: keep the pool tiny, one connection per function instance is plenty
     max: Number(process.env.DB_POOL_MAX ?? 3),
     idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 20_000, // Neon may be waking from suspend
     ssl: /localhost|127\.0\.0\.1/.test(connectionString) ? undefined : { rejectUnauthorized: false },
   });
   const wrap = (q: { query: PgPool["query"] }): Queryable => ({
@@ -50,9 +51,16 @@ export async function createPgDb(connectionString = databaseUrl()): Promise<Db> 
     },
   });
   const base = wrap(pool);
+  // Retried after a failure: a transient connect/auth timeout must not poison this instance for its whole lifetime.
+  let readyPromise: Promise<void> | undefined;
   const db: Db = {
     ...base,
-    ready: pool.query(SCHEMA_SQL).then(() => undefined),
+    get ready() {
+      return (readyPromise ??= pool.query(SCHEMA_SQL).then(
+        () => undefined,
+        (e) => { readyPromise = undefined; throw e; },
+      ));
+    },
     async tx(fn) {
       await db.ready;
       const client = await pool.connect();
@@ -70,7 +78,7 @@ export async function createPgDb(connectionString = databaseUrl()): Promise<Db> 
     },
     close: () => pool.end(),
   };
-  db.ready.catch(() => undefined); // surfaced on first use
+  db.ready.catch(() => undefined); // surfaced (and retried) on next use
   return db;
 }
 
