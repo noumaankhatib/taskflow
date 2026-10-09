@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // authenticated, fully dynamic app: no static prerendering / cache components
   poweredByHeader: false,
+  serverExternalPackages: ["pg", "@electric-sql/pglite"],
   async headers() {
     return [
       {

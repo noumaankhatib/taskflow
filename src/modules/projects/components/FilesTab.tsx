@@ -13,7 +13,7 @@ import { useCan, useLookup, useMe } from "@/lib/lookups";
 import { formatDate } from "@/utils/format";
 import type { ProjectView } from "./types";
 
-const MAX = 10 * 1024 * 1024;
+const MAX = 4 * 1024 * 1024;
 const size = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 export function FilesTab({ project }: { project: ProjectView }) {
@@ -34,7 +34,7 @@ export function FilesTab({ project }: { project: ProjectView }) {
   async function upload(files: FileList | File[]) {
     setBusy(true);
     for (const file of Array.from(files)) {
-      if (file.size > MAX) { toast.error(`${file.name} is larger than the 10 MB limit.`); continue; }
+      if (file.size > MAX) { toast.error(`${file.name} is larger than the 4 MB limit.`); continue; }
       const form = new FormData();
       form.set("file", file); form.set("projectId", project.id); form.set("entityType", "PROJECT"); form.set("entityId", project.id);
       try { await api.upload("/api/attachments", form); toast.success(`${file.name} uploaded`); } catch (e) { toast.error(e); }
@@ -50,7 +50,7 @@ export function FilesTab({ project }: { project: ProjectView }) {
 
   return (
     <Card>
-      <CardHeader title="Project files" description="Contracts, briefs and deliverables. Max 10 MB per file."
+      <CardHeader title="Project files" description="Contracts, briefs and deliverables. Max 4 MB per file."
         action={canUpload && !project.isDeleted && <><input ref={input} type="file" multiple hidden onChange={(e) => e.target.files && upload(e.target.files)} /><Button size="sm" icon={<Upload className="size-4" />} loading={busy} onClick={() => input.current?.click()}>Upload</Button></>} />
       {canUpload && !project.isDeleted && (
         <div onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); upload(e.dataTransfer.files); }}

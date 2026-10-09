@@ -10,7 +10,7 @@ import type { PublicUser, User } from "@/schemas/entities";
 export async function getCurrentUser(): Promise<PublicUser | null> {
   await seedIfNeeded();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  const user = await getServices().auth.userFromSession(await readSession(token));
+  const user = await (await getServices()).auth.userFromSession(await readSession(token));
   return user ? toPublic(user) : null;
 }
 

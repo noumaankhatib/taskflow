@@ -1,5 +1,4 @@
-import type { Repositories, StorageAdmin } from "@/repositories/interfaces";
-import { createJsonRepositories, createJsonStorageAdmin } from "@/repositories/json";
+import { createInfra, type Infra } from "@/repositories/infra";
 import { ActivityService } from "./ActivityService";
 import { NotificationService } from "./NotificationService";
 import { AlertService } from "./AlertService";
@@ -18,11 +17,11 @@ import { PaymentService } from "@/modules/payments/payment.service";
 import { paths } from "@/utils/config";
 
 /** Composition root. The ONLY place that knows which repository implementation is used. */
-export function createServices(repos: Repositories, storage: StorageAdmin) {
+export function createServices({ repos, storage, backupStore, files }: Infra) {
   const activity = new ActivityService(repos);
   const notifications = new NotificationService(repos);
   const deps = { repos, activity, notifications };
-  const backups = new BackupService(deps, storage);
+  const backups = new BackupService(deps, storage, backupStore);
   const projects = new ProjectService(deps, () => backups);
   const tasks = new TaskService(deps);
   const expenses = new ExpenseService(deps);
@@ -33,7 +32,7 @@ export function createServices(repos: Repositories, storage: StorageAdmin) {
     users: new UserService(deps),
     clients: new ClientService(deps),
     time: new TimeEntryService(deps),
-    attachments: new AttachmentService(deps),
+    attachments: new AttachmentService(deps, files),
     alerts: new AlertService(deps),
     search: new SearchService(deps),
     dashboard: new DashboardService(deps, projects, tasks, expenses, payments),
@@ -42,16 +41,20 @@ export function createServices(repos: Repositories, storage: StorageAdmin) {
 }
 export type Services = ReturnType<typeof createServices>;
 
-const g = globalThis as unknown as { __services?: Map<string, Services> };
+const g = globalThis as unknown as { __services?: Map<string, Promise<Services>> };
 
-/** Process-wide services bound to the JSON implementation (swap here for PostgreSQL). */
-export function getServices(): Services {
+/**
+ * Process-wide services. The backend is chosen from the environment (see createInfra):
+ * DATABASE_URL → Postgres (+ Vercel Blob), otherwise local JSON files.
+ */
+export function getServices(): Promise<Services> {
   g.__services ??= new Map();
-  const key = paths.data;
+  const key = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? paths.data;
   let s = g.__services.get(key);
   if (!s) {
-    s = createServices(createJsonRepositories(), createJsonStorageAdmin());
+    s = createInfra().then(createServices);
     g.__services.set(key, s);
+    s.catch(() => g.__services?.delete(key)); // allow a retry after a transient connection failure
   }
   return s;
 }

@@ -1,9 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { actors, makeEnv } from "./helpers";
+import { actors, makeEnv, TEST_DATABASE_URL, type Backend } from "./helpers";
 import { computeFinancials } from "@/modules/projects/finance";
 
+// The whole domain suite runs against BOTH backends: local JSON files and (in-process) PostgreSQL.
+describe.each<Backend>(["json", "postgres", ...(TEST_DATABASE_URL ? (["pg-server"] as const) : [])])("%s backend", (backend) => {
 let env: Awaited<ReturnType<typeof makeEnv>>;
-beforeEach(async () => { await env?.cleanup(); env = await makeEnv(); });
+beforeEach(async () => { await env?.cleanup(); env = await makeEnv({ backend }); });
 afterAll(() => env.cleanup());
 const { admin, pm, dev, finance, designer } = actors;
 
@@ -258,6 +260,20 @@ describe("dashboard & reports", () => {
   });
 });
 
+describe("file attachments", () => {
+  it("stores and returns file bytes, and enforces type and size limits", async () => {
+    const file = new File([Buffer.from("hello receipt")], "receipt.pdf", { type: "application/pdf" });
+    const a = await env.svc.attachments.upload(dev, { projectId: "PRJ-001", entityType: "PROJECT", entityId: "PRJ-001" }, file);
+    expect(a).toMatchObject({ fileName: "receipt.pdf", size: 13, projectId: "PRJ-001" });
+    const opened = await env.svc.attachments.open(a.id);
+    expect(opened.buffer.toString()).toBe("hello receipt");
+    await expect(env.svc.attachments.upload(dev, { projectId: "PRJ-001", entityType: "PROJECT" }, new File(["x"], "evil.exe"))).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(env.svc.attachments.upload(dev, { projectId: "PRJ-001", entityType: "PROJECT" }, new File([Buffer.alloc(5 * 1024 * 1024)], "big.pdf"))).rejects.toThrow(/too large/);
+    await env.svc.attachments.remove(dev, a.id);
+    await expect(env.svc.attachments.open(a.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
 describe("partial updates never reset untouched fields", () => {
   it("project / client / expense / payment / time-entry patches only change what was sent", async () => {
     const p0 = await env.svc.projects.get(admin, "PRJ-002");
@@ -281,4 +297,5 @@ describe("partial updates never reset untouched fields", () => {
     const te = await env.svc.time.update(admin, t[0].id, { description: "x" });
     expect(te).toMatchObject({ hours: t[0].hours, billable: t[0].billable });
   });
+});
 });

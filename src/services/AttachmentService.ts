@@ -1,9 +1,9 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { Deps } from "./shared";
 import { alive } from "./shared";
-import { MAX_UPLOAD_BYTES, paths } from "@/utils/config";
+import type { FileStorage } from "@/repositories/interfaces";
+import { MAX_UPLOAD_BYTES } from "@/utils/config";
 import { forbidden, invalid, notFound } from "@/utils/errors";
 import { can, requirePerm, type Actor } from "@/utils/rbac";
 
@@ -12,7 +12,10 @@ const ALLOWED_EXT = new Set([
 ]);
 
 export class AttachmentService {
-  constructor(private d: Deps) {}
+  constructor(
+    private d: Deps,
+    private files: FileStorage,
+  ) {}
 
   async list(f: { projectId?: string; entityType?: string; entityId?: string }) {
     return alive(await this.d.repos.attachments.findAll())
@@ -34,9 +37,7 @@ export class AttachmentService {
     const fileName = path.basename(file.name).replace(/[^\w.\- ()]/g, "_").slice(0, 200) || "file";
     const ext = path.extname(fileName).toLowerCase();
     if (!ALLOWED_EXT.has(ext)) throw invalid(`File type ${ext || "(none)"} is not allowed.`);
-    const storedName = `${crypto.randomUUID()}${ext}`;
-    await fs.mkdir(paths.uploads, { recursive: true });
-    await fs.writeFile(path.join(paths.uploads, storedName), Buffer.from(await file.arrayBuffer()));
+    const storedName = await this.files.put(`${crypto.randomUUID()}${ext}`, Buffer.from(await file.arrayBuffer()), file.type || "application/octet-stream");
     try {
       const a = await this.d.repos.attachments.create({
         entityType: meta.entityType, entityId: meta.entityId ?? "UNLINKED", projectId: meta.projectId,
@@ -49,7 +50,7 @@ export class AttachmentService {
       });
       return a;
     } catch (err) {
-      await fs.rm(path.join(paths.uploads, storedName), { force: true });
+      await this.files.remove(storedName);
       throw err;
     }
   }
@@ -57,9 +58,8 @@ export class AttachmentService {
   async open(id: string) {
     const a = await this.d.repos.attachments.findById(id);
     if (!a || a.isDeleted) throw notFound("File");
-    const buf = await fs.readFile(path.join(paths.uploads, a.storedName)).catch(() => {
-      throw notFound("File");
-    });
+    const buf = await this.files.get(a.storedName);
+    if (!buf) throw notFound("File");
     return { attachment: a, buffer: buf };
   }
 

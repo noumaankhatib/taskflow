@@ -69,3 +69,26 @@ describe("JsonFileStore", () => {
     expect((await svc.repos.clients.findAll()).length).toBe(40);
   });
 });
+
+describe.skipIf(!process.env.TEST_DATABASE_URL)("PostgreSQL (real server) concurrency", () => {
+  it("assigns unique ids and loses nothing under concurrent creates from separate connections", async () => {
+    const e = await makeEnv({ seed: false, backend: "pg-server" });
+    try {
+      const made = await Promise.all(
+        Array.from({ length: 60 }, (_, i) => e.svc.repos.clients.create({ companyName: `C${i}`, contactPerson: "", email: "", phone: "", address: "", notes: "", active: true })),
+      );
+      expect(new Set(made.map((c) => c.id)).size).toBe(60);
+      expect((await e.svc.repos.clients.findAll()).length).toBe(60);
+      // concurrent read-modify-write on one row keeps every patch
+      const id = made[0].id;
+      await Promise.all([
+        e.svc.repos.clients.update(id, { phone: "1" }),
+        e.svc.repos.clients.update(id, { address: "x" }),
+        e.svc.repos.clients.update(id, { notes: "n" }),
+      ]);
+      expect(await e.svc.repos.clients.findById(id)).toMatchObject({ phone: "1", address: "x", notes: "n" });
+    } finally {
+      await e.cleanup();
+    }
+  });
+});

@@ -33,6 +33,7 @@ Browser ──fetch──▶ /api route handler ──▶ Service ──▶ Repo
                    error mapping          rules       contract
 ```
 
+* The backend is chosen by the environment: **`DATABASE_URL` set → PostgreSQL (+ Vercel Blob for uploads); otherwise local JSON files.**
 * The UI never reads or writes JSON. It only calls `/api/*` (`src/lib/api.ts`).
 * `src/services/container.ts` is the **only** place that picks the repository implementation. To move to PostgreSQL, implement the
   interfaces in `src/repositories/interfaces/` (`Repository<T>`, `StorageAdmin`) and change two lines there — services, API and UI are untouched.
@@ -73,9 +74,32 @@ Browser ──fetch──▶ /api route handler ──▶ Service ──▶ Repo
 
 `backups/<yyyy-mm-dd-hhmmss>/` holds a full snapshot + `manifest.json`. Created manually (Settings → Data & backups), and automatically before
 archiving a project, restoring a backup, or importing data (last 30 kept). Export downloads one JSON bundle; import/restore validate every row of
-every collection **before** replacing anything and refuse bundles with no active admin. Uploaded files (`data/uploads/`) are not part of backups.
+every collection **before** replacing anything and refuse bundles with no active admin. Locally, uploaded files (`data/uploads/`) are not part of backups. On PostgreSQL, backups are rows in a `backups` table, and restore/import run in a single transaction.
 
 ## Tests
 
 `npm test` — storage (concurrent writes, atomicity, corruption recovery), projects/tasks/assignees/status/permissions, expenses & approval,
 payments, profit calculation, notifications, auth, backup/restore/import, dashboard.
+
+## Deploy on Vercel (PostgreSQL + Blob)
+
+Vercel's filesystem is read-only, so production uses PostgreSQL (Neon) for data and Vercel Blob for uploaded files. Each entity is stored as a
+validated JSON document in a `records` table (created automatically on first use); writes are transactional with a per-collection advisory lock,
+so concurrent requests behave exactly like the JSON write queue.
+
+1. Push the repo to GitHub and **Import** it at vercel.com (Add New → Project). Framework preset: Next.js (auto-detected).
+2. In the project's **Storage** tab: *Create Database* → **Neon (Postgres)**. Vercel adds `DATABASE_URL` (and `POSTGRES_URL`) to the project.
+3. *Create* a **Blob** store (choose **Private**). This adds `BLOB_READ_WRITE_TOKEN`. Without it, uploads fall back to the local disk, which does not persist on Vercel.
+4. **Settings → Environment Variables**: add `SESSION_SECRET` (a long random string, e.g. `openssl rand -hex 32`) and `COOKIE_SECURE=true`.
+5. Create the tables and your first admin from your machine (there is no demo seeding in production):
+   ```bash
+   npm i -g vercel && vercel link        # once
+   vercel env pull .env.local            # downloads DATABASE_URL etc.
+   npm run db:migrate                    # optional: tables are also created lazily on first request
+   npm run db:create-admin -- you@company.com "Your Name" 'a-strong-password'
+   ```
+6. Deploy (push to `main`, or `vercel --prod`) and sign in. Then use Settings → Data & backups → **Import** to load your data.
+
+Moving existing local data to the database: `npm run db:copy-local` (refuses to overwrite a non-empty database unless `--force`).
+Uploads are limited to 4 MB (Vercel's request-body limit is 4.5 MB). Pick the Neon region closest to your Vercel functions region.
+Running the Postgres tests locally: `TEST_DATABASE_URL=postgres://… npm test` (without it the suite uses an in-process Postgres, PGlite, so no server is needed).

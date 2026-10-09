@@ -43,8 +43,4 @@ export interface Repositories {
   attachments: AttachmentRepository;
 }
 
-/** Bulk operations used by backup/restore/import. A Postgres implementation would use transactions. */
-export interface StorageAdmin {
-  readAll(name: string): Promise<unknown[]>;
-  replaceAll(name: string, rows: unknown[]): Promise<void>;
-}
+export type { BackupInfo, BackupStore, FileStorage, StorageAdmin } from "./infra";

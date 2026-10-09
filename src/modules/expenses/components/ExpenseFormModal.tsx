@@ -98,7 +98,7 @@ export function ExpenseFormModal({ open, onClose, expense, projectId }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-600">Receipt</label>
           <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600">
-            <Paperclip className="size-4" /><span className="truncate">{file ? file.name : attachmentId ? "Replace receipt…" : "Attach file (max 10 MB)"}</span>
+            <Paperclip className="size-4" /><span className="truncate">{file ? file.name : attachmentId ? "Replace receipt…" : "Attach file (max 4 MB)"}</span>
             <input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           {attachmentId && !file && <a href={`/api/attachments/${attachmentId}`} className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"><FileText className="size-3" />Current receipt</a>}

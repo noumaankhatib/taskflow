@@ -17,8 +17,13 @@ function secret(): Uint8Array {
       s = fs.readFileSync(file, "utf8").trim();
     } catch {
       s = crypto.randomBytes(32).toString("hex");
-      fs.mkdirSync(paths.data, { recursive: true });
-      fs.writeFileSync(file, s, { mode: 0o600 });
+      try {
+        fs.mkdirSync(paths.data, { recursive: true });
+        fs.writeFileSync(file, s, { mode: 0o600 });
+      } catch {
+        // read-only filesystem (e.g. Vercel): a stable secret must come from the environment
+        throw new Error("SESSION_SECRET environment variable is required on this platform.");
+      }
     }
   }
   return (secretCache = new TextEncoder().encode(s));

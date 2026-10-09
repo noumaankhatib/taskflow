@@ -88,5 +88,8 @@ export function createJsonStorageAdmin(dataDir = paths.data): import("../interfa
   return {
     readAll: (name) => s[name].read(),
     replaceAll: (name, rows) => s[name].replaceAll(rows),
+    async replaceMany(data) {
+      for (const [name, rows] of Object.entries(data)) await s[name].replaceAll(rows);
+    },
   };
 }

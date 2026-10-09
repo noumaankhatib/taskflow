@@ -54,7 +54,7 @@ export function route<P = Record<string, string>>(fn: Handler<P>, opts: Options 
     try {
       if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) assertSameOrigin(req);
       await seedIfNeeded();
-      const svc = getServices();
+      const svc = await getServices();
       const params = (await rc.params) ?? ({} as P);
       let user: User | null = null;
       if (!opts.public) {
