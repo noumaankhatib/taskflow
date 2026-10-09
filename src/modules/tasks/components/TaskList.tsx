@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Pagination, SortTh, TableWrap, Td, THead, Th, Tr } from "@/components/ui/table";
 import { cn } from "@/components/ui/cn";
 import { useCan, useLookup, useMe } from "@/lib/lookups";
-import { DueDate, PriorityMenu, StatusMenu, canEditTask, updateTask, type TaskView } from "./shared";
+import { DueDate, PriorityMenu, StatusMenu, TypeBadge, canEditTask, issueRowClass, updateTask, type TaskView } from "./shared";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { invalidateTasks } from "./shared";
@@ -43,8 +43,8 @@ export function TaskList({ tasks, onOpen, sort, onSort, page, totalPages, total,
             {tasks.map((t) => {
               const ed = canEditTask(me, t) && !deletedMode;
               return (
-                <Tr key={t.id} onClick={deletedMode ? undefined : () => open(t.id)} className={cn(t.isOverdue && "bg-rose-50/40")}>
-                  <Td className="max-w-md"><div className="truncate font-medium text-slate-900">{t.title}</div><div className="truncate text-xs text-slate-400">{t.id} · {projectName(t.projectId)}</div>
+                <Tr key={t.id} onClick={deletedMode ? undefined : () => open(t.id)} className={cn(t.isOverdue && "bg-rose-50/40", issueRowClass(t))}>
+                  <Td className="max-w-md"><div className="flex items-center gap-2"><TypeBadge value={t.type} /><span className="truncate font-medium text-slate-900">{t.title}</span></div><div className="truncate text-xs text-slate-400">{t.id} · {projectName(t.projectId)}</div>
                     {t.subtaskTotal > 0 && <div className="text-xs text-slate-400">{t.subtaskDone}/{t.subtaskTotal} subtasks</div>}</Td>
                   <Td onClick={(e) => e.stopPropagation()}><StatusMenu value={t.status} disabled={!ed} onChange={(s) => change(t.id, { status: s })} /></Td>
                   <Td onClick={(e) => e.stopPropagation()}><PriorityMenu value={t.priority} disabled={!ed} onChange={(s) => change(t.id, { priority: s })} /></Td>
@@ -63,10 +63,10 @@ export function TaskList({ tasks, onOpen, sort, onSort, page, totalPages, total,
         {tasks.map((t) => {
           const ed = canEditTask(me, t) && !deletedMode;
           return (
-            <li key={t.id} className={cn("p-3", t.isOverdue && "bg-rose-50/40")}>
+            <li key={t.id} className={cn("p-3", t.isOverdue && "bg-rose-50/40", issueRowClass(t))}>
               <button className="block w-full text-left" onClick={() => open(t.id)}>
                 <span className="block text-[11px] text-slate-400">{t.id} · {projectName(t.projectId)}</span>
-                <span className="block text-sm font-medium text-slate-900">{t.title}</span>
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-900"><TypeBadge value={t.type} />{t.title}</span>
               </button>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <StatusMenu value={t.status} disabled={!ed} onChange={(s) => change(t.id, { status: s })} />

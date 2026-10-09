@@ -12,13 +12,15 @@ import { formatDate, formatMoney, formatPct, label } from "@/utils/format";
 import type { Expense } from "@/schemas/entities";
 import type { TaskView } from "@/modules/tasks/task.service";
 import type { PaymentView } from "@/modules/payments/payment.service";
+import { IssueRow } from "@/modules/tasks/components/OpenIssues";
 import { TaskDrawer } from "@/modules/tasks/components/TaskDrawer";
 
 interface DashboardData {
+  openIssues: TaskView[];
   projects: { total: number; active: number; completed: number; atRisk: number };
   tasks: { backlog: number; todo: number; inProgress: number; blocked: number; review: number; completed: number; overdue: number; total: number };
   financials: null | { contractValue: number; received: number; pending: number; teamCost: number; otherExpenses: number; totalCost: number; netProfit: number; profitMargin: number };
-  projectProgress: { id: string; name: string; progress: number; health: string; status: string; taskStats: { total: number; done: number; overdue: number }; expectedEndDate: string | null }[];
+  projectProgress: { id: string; name: string; progress: number; health: string; status: string; taskStats: { total: number; done: number; overdue: number; openIssues: number; urgentIssues: number }; expectedEndDate: string | null }[];
   myTasks: TaskView[];
   recentTasks: TaskView[];
   recentExpenses: (Expense & { projectName: string })[];
@@ -87,6 +89,8 @@ function Body({ d, openTask }: { d: DashboardData; openTask: (id: string) => voi
           <StatCard label="Profit margin" value={formatPct(f.profitMargin)} tone={f.profitMargin >= 0 ? "good" : "bad"} icon={<Percent className="size-4" />} />
         </div>
       )}
+
+      <OpenIssuesSection issues={d.openIssues} onOpen={openTask} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Project progress" action={<Link href="/projects" className="text-xs font-medium text-indigo-600 hover:underline">All projects</Link>}>
@@ -215,5 +219,38 @@ function WorkloadRow({ w }: { w: DashboardData["teamWorkload"][number] }) {
         <p className="text-xs text-slate-400"><span aria-hidden className="mr-1.5 font-mono tracking-tighter text-slate-300">{"█".repeat(filled)}{"░".repeat(blocks - filled)}</span>{w.openTasks} open · {w.remainingHours}h left{w.overdueTasks ? <span className="text-rose-600"> · {w.overdueTasks} overdue</span> : ""}</p>
       </div>
     </li>
+  );
+}
+
+/** Open bugs & issues, grouped by project, each row showing who it is assigned to. Urgent ones are highlighted. */
+function OpenIssuesSection({ issues, onOpen }: { issues: TaskView[]; onOpen: (id: string) => void }) {
+  const { projectName, userName } = useLookup();
+  const urgent = issues.filter((t) => t.isUrgentIssue).length;
+  const groups = new Map<string, TaskView[]>();
+  for (const t of issues) (groups.get(t.projectId) ?? groups.set(t.projectId, []).get(t.projectId)!).push(t);
+  const unassigned = issues.filter((t) => !t.primaryOwnerId).length;
+  const byPerson = new Map<string, number>();
+  for (const t of issues) if (t.primaryOwnerId) byPerson.set(t.primaryOwnerId, (byPerson.get(t.primaryOwnerId) ?? 0) + 1);
+  return (
+    <Section title="Open issues" description={issues.length ? `${issues.length} open${urgent ? ` · ${urgent} overdue, blocked or critical` : ""}` : undefined}
+      action={<Link href="/tasks?type=BUG,ISSUE" className="text-xs font-medium text-indigo-600 hover:underline">View all</Link>}>
+      {issues.length ? (
+        <>
+          <p className="mb-3 flex flex-wrap gap-1.5 text-xs">
+            {[...byPerson].sort((a, b) => b[1] - a[1]).map(([id, n]) => <Badge key={id} tone="slate">{userName(id)} · {n}</Badge>)}
+            {unassigned > 0 && <Badge tone="amber">Unassigned · {unassigned}</Badge>}
+          </p>
+          <div className="space-y-4">
+            {[...groups].map(([pid, rows]) => (
+              <div key={pid}>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{projectName(pid)} <span className="font-normal normal-case">· {rows.length}</span></p>
+                <ul className="-mx-3 space-y-0.5">{rows.slice(0, 5).map((t) => <IssueRow key={t.id} t={t} onOpen={onOpen} />)}</ul>
+                {rows.length > 5 && <p className="mt-1 text-xs text-slate-400">+{rows.length - 5} more in this project</p>}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : <EmptyState title="No open issues" description="Tasks of type Bug or Issue that are not completed show up here." />}
+    </Section>
   );
 }

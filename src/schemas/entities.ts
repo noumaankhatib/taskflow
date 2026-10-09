@@ -26,6 +26,10 @@ export const TASK_STATUSES = ["BACKLOG", "TODO", "IN_PROGRESS", "BLOCKED", "REVI
 export const TaskStatus = z.enum(TASK_STATUSES);
 export type TaskStatus = z.infer<typeof TaskStatus>;
 
+export const TASK_TYPES = ["TASK", "BUG", "ISSUE"] as const;
+export const TaskType = z.enum(TASK_TYPES);
+export type TaskType = z.infer<typeof TaskType>;
+
 export const EXPENSE_CATEGORIES = [
   "HOSTING", "DOMAIN", "SOFTWARE", "API", "DESIGN", "MARKETING", "TRAVEL", "HARDWARE", "TEAM", "MISCELLANEOUS",
 ] as const;
@@ -127,6 +131,7 @@ export const TaskSchema = z.object({
   projectId: idOf("PRJ"),
   title: requiredText("Title"),
   description: z.string().trim().max(10000).default(""),
+  type: TaskType.default("TASK"),
   status: TaskStatus,
   priority: Priority,
   startDate: dateString.nullable().default(null),

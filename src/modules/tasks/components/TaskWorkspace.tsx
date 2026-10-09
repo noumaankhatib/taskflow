@@ -10,7 +10,7 @@ import { qs } from "@/lib/api";
 import { useApi, useDebounced } from "@/lib/hooks";
 import { useCan, useLookup } from "@/lib/lookups";
 import { PRIORITIES } from "@/schemas/common";
-import { TASK_STATUSES } from "@/schemas/entities";
+import { TASK_STATUSES, TASK_TYPES } from "@/schemas/entities";
 import { label } from "@/utils/format";
 import { TaskBoard } from "./TaskBoard";
 import { TaskDrawer } from "./TaskDrawer";
@@ -43,6 +43,7 @@ function Workspace({ projectId, mineOnly }: { projectId?: string; mineOnly?: boo
   const [assignee, setAssignee] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
+  const [type, setType] = useState(sp.get("type") ?? "");
   const [due, setDue] = useState("");
   const [tag, setTag] = useState("");
   const [deleted, setDeleted] = useState(false);
@@ -60,15 +61,15 @@ function Workspace({ projectId, mineOnly }: { projectId?: string; mineOnly?: boo
     router.replace(`${pathname}${p.size ? `?${p}` : ""}`, { scroll: false });
   };
 
-  const filterCount = [q, project, assignee, status, priority, due, tag].filter(Boolean).length + (deleted ? 1 : 0);
-  const clear = () => { setQ(""); setProject(""); setAssignee(""); setStatus(""); setPriority(""); setDue(""); setTag(""); setDeleted(false); setPage(1); };
-  useEffect(() => setPage(1), [dq, project, assignee, status, priority, due, dtag, deleted, mineOnly]);
+  const filterCount = [q, project, assignee, status, priority, type, due, tag].filter(Boolean).length + (deleted ? 1 : 0);
+  const clear = () => { setQ(""); setProject(""); setAssignee(""); setStatus(""); setPriority(""); setType(""); setDue(""); setTag(""); setDeleted(false); setPage(1); };
+  useEffect(() => setPage(1), [dq, project, assignee, status, priority, type, due, dtag, deleted, mineOnly]);
 
   const dueParams = due === "overdue" ? { overdue: true } : due === "today" ? { dueFrom: dayStr(), dueTo: dayStr() } : due === "week" ? { dueFrom: dayStr(), dueTo: dayStr(7) } : {};
   const effView: View = deleted ? "list" : view;
   const url = `/api/tasks${qs({
     projectId: projectId ?? project, assigneeId: mineOnly ? undefined : assignee, mine: mineOnly ? true : undefined,
-    status, priority, q: dq, tags: dtag, deleted: deleted || undefined, ...dueParams,
+    status, priority, type, q: dq, tags: dtag, deleted: deleted || undefined, ...dueParams,
     pageSize: effView === "board" ? 500 : PAGE_SIZE, page: effView === "board" ? 1 : page, sort: effView === "board" ? undefined : sort,
   })}`;
   const { data, meta, error, isLoading, reload } = useApi<TaskView[]>(url);
@@ -82,8 +83,9 @@ function Workspace({ projectId, mineOnly }: { projectId?: string; mineOnly?: boo
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput aria-label="Search tasks" placeholder="Search tasks…" value={q} onChange={(e) => setQ(e.target.value)} className="w-full sm:w-56" />
         {!projectId && <Select aria-label="Project" value={project} onChange={(e) => setProject(e.target.value)} className="!w-auto max-w-44"><option value="">All projects</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>}
-        {!mineOnly && <Select aria-label="Assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)} className="!w-auto max-w-40"><option value="">Anyone</option>{users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>}
+        {!mineOnly && <Select aria-label="Assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)} className="!w-auto max-w-40"><option value="">Assigned to: anyone</option>{users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>}
         <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="!w-auto"><option value="">Any status</option>{enumOptions(TASK_STATUSES, label)}</Select>
+        <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className="!w-auto"><option value="">Any type</option>{enumOptions(TASK_TYPES, label)}<option value="BUG,ISSUE">Bugs &amp; issues</option></Select>
         <Select aria-label="Priority" value={priority} onChange={(e) => setPriority(e.target.value)} className="!w-auto"><option value="">Any priority</option>{enumOptions(PRIORITIES, label)}</Select>
         <Select aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} className="!w-auto"><option value="">Any due date</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">Next 7 days</option></Select>
         <SearchInput aria-label="Filter by tag" placeholder="Tag" value={tag} onChange={(e) => setTag(e.target.value)} className="w-28" />

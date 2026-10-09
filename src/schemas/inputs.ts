@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Currency, PaymentMethod, Priority, amount, dateString, idOf, positiveAmount, requiredText } from "./common";
 import {
-  ExpenseCategory, PaymentStatus, ProjectStatus, Role, TaskStatus, NotificationType, Severity,
+  ExpenseCategory, PaymentStatus, ProjectStatus, Role, TaskStatus, TaskType, NotificationType, Severity,
 } from "./entities";
 
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
@@ -92,6 +92,7 @@ const taskBase = z.object({
   projectId: idOf("PRJ"),
   title: requiredText("Title"),
   description: z.string().trim().max(10000).default(""),
+  type: TaskType.default("TASK"),
   status: TaskStatus.default("TODO"),
   priority: Priority.default("MEDIUM"),
   startDate: optDate,

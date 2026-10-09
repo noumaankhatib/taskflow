@@ -88,11 +88,13 @@ export class ProjectService {
     const done = tasks.filter((t) => t.status === "COMPLETED").length;
     const open = tasks.filter((t) => t.status !== "COMPLETED");
     const overdue = open.filter((t) => t.dueDate && t.dueDate < today()).length;
+    const openIssues = open.filter((t) => t.type === "BUG" || t.type === "ISSUE");
+    const urgentIssues = openIssues.filter((t) => (t.dueDate && t.dueDate < today()) || t.status === "BLOCKED" || t.priority === "CRITICAL").length;
     const memberIds = [...new Set(s.members.filter((m) => m.projectId === p.id).map((m) => m.userId))];
     return {
       ...p,
       memberIds,
-      taskStats: { total: tasks.length, done, overdue },
+      taskStats: { total: tasks.length, done, overdue, openIssues: openIssues.length, urgentIssues },
       progress: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
       health: projectHealth(p, overdue, open.length),
       financials: showFin ? this.fin(p, s) : null,

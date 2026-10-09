@@ -1,7 +1,7 @@
 import type { Deps } from "./shared";
 import { alive } from "./shared";
 import type { ProjectService } from "@/modules/projects/project.service";
-import type { TaskService, TaskView } from "@/modules/tasks/task.service";
+import { isIssue, type TaskService, type TaskView } from "@/modules/tasks/task.service";
 import type { ExpenseService } from "@/modules/expenses/expense.service";
 import type { PaymentService } from "@/modules/payments/payment.service";
 import { sumFinancials } from "@/modules/projects/finance";
@@ -11,6 +11,7 @@ import { round2 } from "@/utils/format";
 
 /** Two working weeks of capacity per person; load % = remaining estimated hours of open tasks / capacity. */
 export const WORKLOAD_CAPACITY_HOURS = 80;
+const PRIORITY_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const isOpen = (t: Pick<TaskView, "status">) => t.status !== "COMPLETED" && t.status !== "CANCELLED";
 
 export class DashboardService {
@@ -64,7 +65,12 @@ export class DashboardService {
     const projectName = new Map(projects.map((p) => [p.id, p.name]));
     const in14 = new Date(Date.now() + 14 * 86400_000).toISOString().slice(0, 10);
 
+    const sev = (t: TaskView) => (t.isUrgentIssue ? 0 : 1);
+    const openIssues = tasks.filter((t) => isIssue(t) && isOpen(t))
+      .sort((a, b) => sev(a) - sev(b) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"));
+
     return {
+      openIssues,
       projects: projectStats,
       tasks: taskStats,
       financials,

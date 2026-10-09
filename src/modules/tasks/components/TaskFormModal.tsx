@@ -9,14 +9,14 @@ import { useToast } from "@/components/ui/toast";
 import { ApiError, api, messageOf } from "@/lib/api";
 import { useLookup } from "@/lib/lookups";
 import { PRIORITIES } from "@/schemas/common";
-import { TASK_STATUSES } from "@/schemas/entities";
+import { TASK_STATUSES, TASK_TYPES } from "@/schemas/entities";
 import { label } from "@/utils/format";
 import { invalidateTasks, projectPeople, type TaskView } from "./shared";
 
 interface Props { open: boolean; onClose: () => void; projectId?: string; task?: TaskView; defaultStatus?: string; onSaved?: (t: TaskView) => void }
 
 const blank = (projectId = "", status = "TODO") => ({
-  projectId, title: "", description: "", status, priority: "MEDIUM", startDate: "", dueDate: "", estimatedHours: "0",
+  projectId, title: "", description: "", type: "TASK", status, priority: "MEDIUM", startDate: "", dueDate: "", estimatedHours: "0",
   primaryOwnerId: null as string | null, contributorIds: [] as string[], tags: [] as string[],
 });
 
@@ -32,7 +32,7 @@ export function TaskFormModal({ open, onClose, projectId, task, defaultStatus, o
     if (!open) return;
     setErrors({}); setFormError(null);
     setF(task ? {
-      projectId: task.projectId, title: task.title, description: task.description, status: task.status, priority: task.priority,
+      projectId: task.projectId, title: task.title, description: task.description, type: task.type, status: task.status, priority: task.priority,
       startDate: task.startDate ?? "", dueDate: task.dueDate ?? "", estimatedHours: String(task.estimatedHours),
       primaryOwnerId: task.primaryOwnerId, contributorIds: task.contributorIds, tags: task.tags,
     } : blank(projectId, defaultStatus));
@@ -52,7 +52,7 @@ export function TaskFormModal({ open, onClose, projectId, task, defaultStatus, o
     if (Object.keys(local).length) return;
     setBusy(true); setFormError(null);
     const body = {
-      title: f.title, description: f.description, status: f.status, priority: f.priority,
+      title: f.title, description: f.description, type: f.type, status: f.status, priority: f.priority,
       startDate: f.startDate, dueDate: f.dueDate, estimatedHours: Number(f.estimatedHours) || 0,
       tags: f.tags, primaryOwnerId: f.primaryOwnerId, contributorIds: f.contributorIds.filter((c) => c !== f.primaryOwnerId),
     };
@@ -86,6 +86,7 @@ export function TaskFormModal({ open, onClose, projectId, task, defaultStatus, o
         )}
         <Input wrapperClassName="sm:col-span-2" label="Title" required autoFocus value={f.title} error={errors.title} maxLength={200} onChange={(e) => set("title", e.target.value)} />
         <Textarea wrapperClassName="sm:col-span-2" label="Description" value={f.description} rows={3} onChange={(e) => set("description", e.target.value)} />
+        <Select label="Type" value={f.type} onChange={(e) => set("type", e.target.value)}>{enumOptions(TASK_TYPES, label)}</Select>
         <Select label="Status" value={f.status} onChange={(e) => set("status", e.target.value)}>{enumOptions(TASK_STATUSES, label)}</Select>
         <Select label="Priority" value={f.priority} onChange={(e) => set("priority", e.target.value)}>{enumOptions(PRIORITIES, label)}</Select>
         <Input label="Start date" type="date" value={f.startDate} error={errors.startDate} onChange={(e) => set("startDate", e.target.value)} />

@@ -1,14 +1,14 @@
 "use client";
-import { CalendarDays } from "lucide-react";
+import { Bug, CalendarDays, CircleAlert } from "lucide-react";
 import type { TaskView } from "@/modules/tasks/task.service";
-import { StatusBadge } from "@/components/ui/display";
+import { Badge, StatusBadge } from "@/components/ui/display";
 import { Menu } from "@/components/ui/menu";
 import { cn } from "@/components/ui/cn";
-import { priorityTone, taskStatusTone } from "@/lib/status";
+import { priorityTone, taskStatusTone, taskTypeTone } from "@/lib/status";
 import { api } from "@/lib/api";
 import { invalidate } from "@/lib/hooks";
 import { PRIORITIES } from "@/schemas/common";
-import { TASK_STATUSES } from "@/schemas/entities";
+import { TASK_STATUSES, TASK_TYPES } from "@/schemas/entities";
 import { can as roleCan } from "@/utils/rbac";
 import { formatDate, label } from "@/utils/format";
 import type { PublicUser } from "@/schemas/entities";
@@ -40,6 +40,25 @@ export function projectPeople(project: ProjectLite | undefined, users: PublicUse
 }
 
 export const PriorityBadge = ({ value }: { value: string }) => <StatusBadge value={value} tones={priorityTone} />;
+
+/** Bug / Issue badge; plain tasks show nothing unless `always` is set. */
+export function TypeBadge({ value, always }: { value: string; always?: boolean }) {
+  if (value === "TASK" && !always) return null;
+  const Icon = value === "BUG" ? Bug : CircleAlert;
+  return <Badge tone={taskTypeTone[value] ?? "slate"}>{value !== "TASK" && <Icon className="size-3" />}{label(value)}</Badge>;
+}
+
+/** Row highlight for open bugs/issues that are overdue, blocked or critical. */
+export const issueRowClass = (t: Pick<TaskView, "isUrgentIssue" | "type" | "status">) =>
+  t.isUrgentIssue ? "bg-rose-50/60 border-l-2 border-l-rose-500" : t.type !== "TASK" && t.status !== "COMPLETED" && t.status !== "CANCELLED" ? "border-l-2 border-l-amber-400" : "";
+
+export function TypeMenu({ value, onChange, disabled }: { value: string; onChange: (s: string) => void; disabled?: boolean }) {
+  if (disabled) return <TypeBadge value={value} always />;
+  return (
+    <Menu align="left" label="Change type" trigger={<span className="cursor-pointer"><TypeBadge value={value} always /></span>}
+      items={TASK_TYPES.map((s) => ({ label: label(s) + (s === value ? " ✓" : ""), onSelect: () => s !== value && onChange(s) }))} />
+  );
+}
 
 export function DueDate({ task, className }: { task: Pick<TaskView, "dueDate" | "isOverdue">; className?: string }) {
   if (!task.dueDate) return <span className={cn("text-xs text-slate-400", className)}>No due date</span>;

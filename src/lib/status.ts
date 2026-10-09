@@ -21,6 +21,7 @@ export const dotClasses: Record<Tone, string> = {
 export const taskStatusTone: Record<string, Tone> = {
   BACKLOG: "zinc", TODO: "slate", IN_PROGRESS: "blue", BLOCKED: "rose", REVIEW: "violet", COMPLETED: "emerald", CANCELLED: "zinc",
 };
+export const taskTypeTone: Record<string, Tone> = { TASK: "slate", BUG: "rose", ISSUE: "amber" };
 export const projectStatusTone: Record<string, Tone> = {
   PLANNING: "sky", ACTIVE: "emerald", ON_HOLD: "amber", COMPLETED: "indigo", CANCELLED: "zinc",
 };

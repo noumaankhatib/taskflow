@@ -60,6 +60,24 @@ describe("tasks", () => {
     expect(n.some((x) => x.type === "TASK_ASSIGNED" && x.entityId === t.id)).toBe(true);
   });
 
+  it("tracks bugs/issues: type filter, urgent flag and per-project open-issue counts", async () => {
+    const plain = await env.svc.tasks.get("TASK-005");
+    expect(plain.type).toBe("TASK");
+    const bug = await env.svc.tasks.create(pm, { projectId: "PRJ-001", title: "Login crashes", type: "BUG", priority: "CRITICAL", primaryOwnerId: "USR-003" });
+    const issue = await env.svc.tasks.create(pm, { projectId: "PRJ-001", title: "Slow report", type: "ISSUE" });
+    expect(bug.type).toBe("BUG");
+    expect(bug.isUrgentIssue).toBe(true);
+    expect(issue.isUrgentIssue).toBe(false);
+    const found = await env.svc.tasks.list({ type: ["BUG", "ISSUE"] });
+    expect(found.map((t) => t.id).sort()).toEqual([bug.id, issue.id].sort());
+    const p = (await env.svc.projects.list(admin)).find((x) => x.id === "PRJ-001")!;
+    expect(p.taskStats.openIssues).toBe(2);
+    expect(p.taskStats.urgentIssues).toBe(1);
+    await env.svc.tasks.update(pm, bug.id, { status: "COMPLETED" });
+    expect((await env.svc.tasks.list({ type: ["BUG"] }))[0].isUrgentIssue).toBe(false);
+    await expect(env.svc.tasks.create(pm, { projectId: "PRJ-001", title: "x", type: "EPIC" })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+
   it("rejects assignees who are not project members", async () => {
     await expect(env.svc.tasks.create(pm, { projectId: "PRJ-004", title: "x", primaryOwnerId: "USR-003" })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });

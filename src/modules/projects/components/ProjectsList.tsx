@@ -105,7 +105,7 @@ export function ProjectsList() {
                       </Td>
                       <Td><div className="flex flex-col items-start gap-1"><StatusBadge value={p.status} tones={projectStatusTone} />{p.status === "ACTIVE" && p.health !== "ON_TRACK" && <StatusBadge value={p.health} tones={healthTone} text={HEALTH_LABEL[p.health]} />}</div></Td>
                       <Td><StatusBadge value={p.priority} tones={priorityTone} /></Td>
-                      <Td><div className="flex items-center gap-2"><ProgressBar value={p.progress} tone={p.progress === 100 ? "emerald" : "indigo"} className="flex-1" label={`${p.name} progress`} /><span className="w-9 text-right text-xs tabular-nums text-slate-500">{p.progress}%</span></div><div className="mt-0.5 text-xs text-slate-400">{p.taskStats.done}/{p.taskStats.total} tasks{p.taskStats.overdue ? <span className="text-rose-500"> · {p.taskStats.overdue} overdue</span> : null}</div></Td>
+                      <Td><div className="flex items-center gap-2"><ProgressBar value={p.progress} tone={p.progress === 100 ? "emerald" : "indigo"} className="flex-1" label={`${p.name} progress`} /><span className="w-9 text-right text-xs tabular-nums text-slate-500">{p.progress}%</span></div><div className="mt-0.5 text-xs text-slate-400">{p.taskStats.done}/{p.taskStats.total} tasks{p.taskStats.overdue ? <span className="text-rose-500"> · {p.taskStats.overdue} overdue</span> : null}</div>{p.taskStats.openIssues > 0 && <div className="mt-1"><span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${p.taskStats.urgentIssues ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"}`}>{p.taskStats.openIssues} open issue{p.taskStats.openIssues > 1 ? "s" : ""}{p.taskStats.urgentIssues ? ` · ${p.taskStats.urgentIssues} urgent` : ""}</span></div>}</Td>
                       <Td><AvatarStack people={team(p)} max={4} /></Td>
                       <Td className="whitespace-nowrap">{formatDate(p.expectedEndDate)}</Td>
                       {showValue && <Td className="text-right tabular-nums">{p.financials ? formatMoney(p.contractValue) : "—"}</Td>}
@@ -124,7 +124,7 @@ export function ProjectsList() {
                     {actions(p)}
                   </div>
                   <div className="flex flex-wrap gap-1.5"><StatusBadge value={p.status} tones={projectStatusTone} /><StatusBadge value={p.priority} tones={priorityTone} />{p.status === "ACTIVE" && p.health !== "ON_TRACK" && <StatusBadge value={p.health} tones={healthTone} text={HEALTH_LABEL[p.health]} />}</div>
-                  <div className="flex items-center gap-2"><ProgressBar value={p.progress} className="flex-1" label="Progress" /><span className="text-xs tabular-nums text-slate-500">{p.progress}%</span></div>
+                  <div className="flex items-center gap-2"><ProgressBar value={p.progress} className="flex-1" label="Progress" /><span className="text-xs tabular-nums text-slate-500">{p.progress}%</span></div>{p.taskStats.openIssues > 0 && <div className={`text-xs font-medium ${p.taskStats.urgentIssues ? "text-rose-600" : "text-amber-700"}`}>{p.taskStats.openIssues} open issue{p.taskStats.openIssues > 1 ? "s" : ""}{p.taskStats.urgentIssues ? ` · ${p.taskStats.urgentIssues} urgent` : ""}</div>}
                   <div className="flex items-center justify-between text-xs text-slate-500"><AvatarStack people={team(p)} max={5} size={22} /><span>Due {formatDate(p.expectedEndDate)}</span></div>
                 </li>
               ))}

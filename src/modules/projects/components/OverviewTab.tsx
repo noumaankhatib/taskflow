@@ -5,6 +5,7 @@ import { Avatar, Card, CardHeader, KeyValue, ProgressBar, StatCard } from "@/com
 import { useApi } from "@/lib/hooks";
 import { useLookup } from "@/lib/lookups";
 import { formatDate, formatPct, round2 } from "@/utils/format";
+import { ProjectOpenIssues } from "@/modules/tasks/components/OpenIssues";
 import { FinancialSummary } from "./FinancialSummary";
 import type { ProjectView } from "./types";
 
@@ -33,6 +34,8 @@ export function OverviewTab({ project: p }: { project: ProjectView }) {
             { label: "Created", value: formatDate(p.createdAt) },
           ]} /></div>
         </Card>
+
+        <ProjectOpenIssues projectId={p.id} />
 
         <Card>
           <CardHeader title="Progress" description={`${p.taskStats.done} of ${p.taskStats.total} tasks completed`} />

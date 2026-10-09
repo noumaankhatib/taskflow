@@ -18,7 +18,7 @@ import { useApi } from "@/lib/hooks";
 import { useCan, useLookup, useMe } from "@/lib/lookups";
 import { formatDate, timeAgo } from "@/utils/format";
 import { TaskFormModal } from "./TaskFormModal";
-import { PriorityMenu, StatusMenu, canEditTask, invalidateTasks, projectPeople, updateTask, type TaskView } from "./shared";
+import { PriorityMenu, StatusMenu, TypeMenu, canEditTask, invalidateTasks, projectPeople, updateTask, type TaskView } from "./shared";
 
 type Detail = TaskView & { subtasks: Subtask[] };
 type TabId = "details" | "activity";
@@ -67,6 +67,7 @@ function Body({ task, reload, onClose }: { task: Detail; reload: () => void; onC
     <div>
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3 sm:px-5">
         <StatusMenu value={task.status} disabled={!editable} onChange={(s) => patch({ status: s }, "Status updated")} />
+        <TypeMenu value={task.type} disabled={!editable} onChange={(s) => patch({ type: s }, "Type updated")} />
         <PriorityMenu value={task.priority} disabled={!editable} onChange={(s) => patch({ priority: s }, "Priority updated")} />
         {task.isOverdue && <Badge tone="rose">Overdue</Badge>}
         {!editable && <Badge tone="zinc">Read-only</Badge>}

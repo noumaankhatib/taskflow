@@ -20,6 +20,8 @@ export interface TaskView extends Task {
   commentCount: number;
   attachmentCount: number;
   isOverdue: boolean;
+  /** Open bug/issue that needs attention: overdue, blocked or critical. */
+  isUrgentIssue: boolean;
 }
 
 export interface TaskFilter {
@@ -27,6 +29,7 @@ export interface TaskFilter {
   assigneeId?: string;
   status?: string[];
   priority?: string[];
+  type?: string[];
   tags?: string[];
   q?: string;
   dueFrom?: string;
@@ -42,6 +45,7 @@ export const taskFilterFromParams = (sp: URLSearchParams): TaskFilter => ({
   assigneeId: sp.get("assigneeId") ?? undefined,
   status: csv(sp.get("status")),
   priority: csv(sp.get("priority")),
+  type: csv(sp.get("type")),
   tags: csv(sp.get("tags")),
   q: sp.get("q") ?? undefined,
   dueFrom: sp.get("dueFrom") ?? undefined,
@@ -51,6 +55,9 @@ export const taskFilterFromParams = (sp: URLSearchParams): TaskFilter => ({
 });
 
 const isOpen = (t: Pick<Task, "status">) => t.status !== "COMPLETED" && t.status !== "CANCELLED";
+export const isIssue = (t: Pick<Task, "type">) => t.type === "BUG" || t.type === "ISSUE";
+/** Records created before task types existed have no `type`; they are plain tasks. */
+const typeOf = (t: Pick<Task, "type">) => t.type ?? "TASK";
 
 export class TaskService {
   constructor(private d: Deps) {}
@@ -68,6 +75,7 @@ export class TaskService {
         (!f.projectId || t.projectId === f.projectId) &&
         (!f.status?.length || f.status.includes(t.status)) &&
         (!f.priority?.length || f.priority.includes(t.priority)) &&
+        (!f.type?.length || f.type.includes(typeOf(t))) &&
         (!f.tags?.length || f.tags.some((x) => t.tags.map((y) => y.toLowerCase()).includes(x.toLowerCase()))) &&
         (!f.dueFrom || (t.dueDate !== null && t.dueDate >= f.dueFrom)) &&
         (!f.dueTo || (t.dueDate !== null && t.dueDate <= f.dueTo)) &&
@@ -109,8 +117,11 @@ export class TaskService {
       const as = A.get(t.id) ?? [];
       const actual = (T.get(t.id) ?? []).reduce((s, e) => s + e.hours, 0);
       const subs = S.get(t.id) ?? [];
+      const type = typeOf(t);
+      const overdue = isOpen(t) && !!t.dueDate && t.dueDate < today();
       return {
         ...t,
+        type,
         primaryOwnerId: as.find((a) => a.role === "PRIMARY")?.userId ?? null,
         contributorIds: as.filter((a) => a.role === "CONTRIBUTOR").map((a) => a.userId),
         actualHours: round2(actual),
@@ -119,7 +130,8 @@ export class TaskService {
         subtaskDone: subs.filter((s) => s.completed).length,
         commentCount: (C.get(t.id) ?? []).length,
         attachmentCount: att.get(t.id) ?? 0,
-        isOverdue: isOpen(t) && !!t.dueDate && t.dueDate < today(),
+        isOverdue: overdue,
+        isUrgentIssue: isIssue({ type }) && isOpen(t) && (overdue || t.status === "BLOCKED" || t.priority === "CRITICAL"),
       };
     });
   }

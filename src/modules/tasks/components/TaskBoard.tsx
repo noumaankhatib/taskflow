@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { dotClasses, taskStatusTone, TASK_BOARD_COLUMNS } from "@/lib/status";
 import { useCan, useLookup, useMe } from "@/lib/lookups";
 import { label } from "@/utils/format";
-import { DueDate, PriorityBadge, StatusMenu, canEditTask, updateTask, type TaskView } from "./shared";
+import { DueDate, PriorityBadge, TypeBadge, StatusMenu, canEditTask, updateTask, type TaskView } from "./shared";
 
 interface Props { tasks: TaskView[]; showExtra: boolean; onOpen: (id: string) => void; onCreate?: (status: string) => void }
 
@@ -96,7 +96,7 @@ function Card({ task, editable, onOpen, onMove, handle, overlay }: { task: TaskV
         </button>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <PriorityBadge value={task.priority} />
+        <span className="flex items-center gap-1"><TypeBadge value={task.type} /><PriorityBadge value={task.priority} /></span>
         {task.tags.slice(0, 2).map((t) => <span key={t} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">{t}</span>)}
         {task.tags.length > 2 && <span className="text-[11px] text-slate-400">+{task.tags.length - 2}</span>}
       </div>
