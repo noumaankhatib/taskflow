@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* keyboard focus ring everywhere, subtle for mouse */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+@keyframes tf-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes tf-slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes tf-pop {
+  from { transform: translateY(6px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.tf-fade { animation: tf-fade 120ms ease-out; }
+.tf-slide-in { animation: tf-slide-in 160ms ease-out; }
+.tf-pop { animation: tf-pop 140ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-fade, .tf-slide-in, .tf-pop { animation: none; }
+}
+
+/* hide scrollbars on horizontal scrollers but keep scrolling */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

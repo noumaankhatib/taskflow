@@ -1,0 +1,7 @@
+/** Server-side logging. Details go to the console only, never to API responses. */
+const stamp = () => new Date().toISOString();
+export const logger = {
+  info: (msg: string, ...rest: unknown[]) => console.log(`[${stamp()}] INFO ${msg}`, ...rest),
+  warn: (msg: string, ...rest: unknown[]) => console.warn(`[${stamp()}] WARN ${msg}`, ...rest),
+  error: (msg: string, ...rest: unknown[]) => console.error(`[${stamp()}] ERROR ${msg}`, ...rest),
+};
